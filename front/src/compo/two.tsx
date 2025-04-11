@@ -14,8 +14,10 @@ const HireMateResult = () => {
     try {
       setEmailSending(true);
   
+      const thresholdDecimal = threshold / 100; // 👈 Convert to decimal
+  
       const response = await fetch(
-        `http://127.0.0.1:8000/send-mails?threshold=${threshold / 100}`, // 👈 send threshold in query
+        `http://127.0.0.1:8000/send-mails?threshold=${thresholdDecimal}`, // ✅ Send decimal
         {
           method: "POST",
         }
@@ -33,6 +35,7 @@ const HireMateResult = () => {
       setEmailSending(false);
     }
   };
+  
   
 
   // Fetch job titles on mount
@@ -185,11 +188,9 @@ const HireMateResult = () => {
                     <td className="py-2 px-4">{c.similarity}%</td>
                     <td className="py-2 px-4">
                     <span
-  className={`px-2 py-1 rounded-full text-xs font-medium ${
-    c.status.toLowerCase() === "selected" ? "bg-green-600" : "bg-yellow-600"
-  }`}
+  className='px-2 py-1 rounded-full text-xs font-medium'
 >
-  {c.status}
+  Selected
 </span>
 
                     </td>

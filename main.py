@@ -66,7 +66,7 @@ class MatchResult(Base):
     id: Mapped[int]=mapped_column(primary_key=True,index=True)
     job_title: Mapped[str] = mapped_column(String)
     candidate_name: Mapped[str] = mapped_column(String)
-    similarity: Mapped[str]=mapped_column(String)
+    similarity: Mapped[float]=mapped_column(Float)
     status: Mapped[str] = mapped_column(String)
     candidate_email: Mapped[str] = mapped_column(String)  
 Base.metadata.create_all(bind=engine)
@@ -86,41 +86,56 @@ def get_db():
     finally:
         db.close()
 
-@app.post("/send-mails")
-def send_mails(threshold: float = 0.6, db: Session = Depends(get_db)):
+@app.post("/send-mails", response_model=None)
+def send_mails(threshold: float = 0.5, db: Session = Depends(get_db)):
+    print('❤️ Called send-mails')
+
     results = db.query(MatchResult).filter(
-        MatchResult.similarity.cast(Float) >= threshold,
+        MatchResult.similarity >= threshold,
         MatchResult.status == "selected"
     ).all()
 
     if not results:
         return JSONResponse(content={"message": "No candidates above threshold."}, status_code=200)
 
-    sender_email = "your@email.com"
-    sender_password = "yourpassword"
+    sender_email = "hirematejob@gmail.com"
+    sender_password = "ecfg yxeh yjaj cudy"  # 👈 use environment variable ideally
 
     try:
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(sender_email, sender_password)
-
         for candidate in results:
+            if not candidate.candidate_email or "@" not in candidate.candidate_email:
+              print(f"⚠️ Skipping invalid email for {candidate.candidate_name}: {candidate.candidate_email}")
+              continue  # Skip invalid emails
+
+            print(f"📧 Sending to {candidate.candidate_email} ➕")
             msg = MIMEMultipart()
             msg["From"] = sender_email
             msg["To"] = candidate.candidate_email
             msg["Subject"] = f"HireMate - You’re Selected for {candidate.job_title}"
 
-            body = f"Hi {candidate.candidate_name},\n\nYou’ve been selected for the role of '{candidate.job_title}' with a similarity score of {round(float(candidate.similarity)*100)}%.\n\nWe’ll contact you soon with the next steps.\n\nBest,\nHireMate Team"
+            body = f"""Hi {candidate.candidate_name},
 
+            You’ve been selected for the role of '{candidate.job_title}' with a similarity score of {round(float(candidate.similarity) * 100)}%.
+
+            We’ll contact you soon with the next steps.
+
+            Best,
+            HireMate Team
+            """
             msg.attach(MIMEText(body, "plain"))
             server.sendmail(sender_email, candidate.candidate_email, msg.as_string())
 
+    
         server.quit()
+        print('✅ All emails sent successfully.')
         return JSONResponse(content={"message": "Emails sent successfully."}, status_code=200)
 
     except Exception as e:
+        print("❌ Email sending error:", e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
-
 
 
 # --------------------- JD Summarizer ---------------------
