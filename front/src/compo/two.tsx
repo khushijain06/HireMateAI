@@ -11,22 +11,15 @@ const HireMateResult = () => {
 
 
   const handleSendEmails = async () => {
-    const selectedCandidates = candidates.filter((c) => c.status.toLowerCase() === "selected");
-  
-    if (selectedCandidates.length === 0) {
-      alert("No selected candidates to email.");
-      return;
-    }
-  
     try {
       setEmailSending(true);
-      const response = await fetch("http://127.0.0.1:8000/send-mails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ candidates: selectedCandidates }),
-      });
+  
+      const response = await fetch(
+        `http://127.0.0.1:8000/send-mails?threshold=${threshold / 100}`, // 👈 send threshold in query
+        {
+          method: "POST",
+        }
+      );
   
       if (response.ok) {
         alert("Emails sent successfully!");
@@ -48,19 +41,23 @@ const HireMateResult = () => {
       try {
         const response = await fetch("http://127.0.0.1:8000/cosine?threshold=0");
         const data = await response.json();
-
-        const titles = data.results.map((job: any) => job.job_title);
-        const uniqueTitles = Array.from(new Set(titles)); // Remove duplicates
-
+  
+        const titles = Array.isArray(data.results)
+          ? data.results.map((job: any) => job.job_title)
+          : [];
+  
+        const uniqueTitles = [...new Set(titles)];
+  
         setJobTitles(["All Jobs", ...uniqueTitles]);
       } catch (error) {
         console.error("Error fetching job titles:", error);
         alert("Failed to load job titles.");
       }
     };
-
+  
     fetchJobTitles();
   }, []);
+  
 
   const handleGetCandidates = async () => {
     setLoading(true);
@@ -187,11 +184,14 @@ const HireMateResult = () => {
                     <td className="py-2 px-4">{c.name}</td>
                     <td className="py-2 px-4">{c.similarity}%</td>
                     <td className="py-2 px-4">
-                      <span
-                        className="px-2 py-1 rounded-full text-amber-50 text-xs font-medium bg-green-600"
-                      >
-                        Selected
-                      </span>
+                    <span
+  className={`px-2 py-1 rounded-full text-xs font-medium ${
+    c.status.toLowerCase() === "selected" ? "bg-green-600" : "bg-yellow-600"
+  }`}
+>
+  {c.status}
+</span>
+
                     </td>
                   </tr>
                 ))

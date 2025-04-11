@@ -1,6 +1,7 @@
 import os
 import csv
 import re
+from typing import Optional
 import fitz
 from sqlalchemy.orm import Session
 import smtplib
@@ -12,7 +13,7 @@ import shutil
 from typing import List
 from fastapi import FastAPI,Query,File,UploadFile,Depends
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine, String, Text ,text
+from sqlalchemy import create_engine, String, Text ,text, Float
 from sqlalchemy.orm import sessionmaker, Mapped, mapped_column, DeclarativeBase
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -78,53 +79,47 @@ SENDER_EMAIL = "hirematejob@gmail.com"
 SENDER_PASSWORD = "ecfg yxeh yjaj cudy"
 
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 @app.post("/send-mails")
-def send_mails_from_frontend(candidates: List[Candidate] = Body(...)):
-    if not candidates:
-        return {"message": "No selected candidates to send emails to."}
+def send_mails(threshold: float = 0.6, db: Session = Depends(get_db)):
+    results = db.query(MatchResult).filter(
+        MatchResult.similarity.cast(Float) >= threshold,
+        MatchResult.status == "selected"
+    ).all()
 
-    success = 0
-    failure = 0
+    if not results:
+        return JSONResponse(content={"message": "No candidates above threshold."}, status_code=200)
 
-    for candidate in candidates:
-        try:
-            subject = f"🎯 Selection for {candidate.job_title}"
-            body = f"""
-Hi {candidate.candidate_name},
+    sender_email = "your@email.com"
+    sender_password = "yourpassword"
 
-✅ Congratulations! You have been selected for the role of **{candidate.job_title}**.
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
 
-Your profile matched our expectations with a similarity score of {candidate.similarity}%.
-We'll get in touch soon for the next steps.
-
-Best regards,  
-HireMate Team
-"""
-
-            # Compose the email
+        for candidate in results:
             msg = MIMEMultipart()
-            msg['From'] = SENDER_EMAIL
-            msg['To'] = candidate.candidate_email
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'plain'))
+            msg["From"] = sender_email
+            msg["To"] = candidate.candidate_email
+            msg["Subject"] = f"HireMate - You’re Selected for {candidate.job_title}"
 
-            # Send it
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                server.starttls()
-                server.login(SENDER_EMAIL, SENDER_PASSWORD)
-                server.sendmail(SENDER_EMAIL, candidate.candidate_email, msg.as_string())
+            body = f"Hi {candidate.candidate_name},\n\nYou’ve been selected for the role of '{candidate.job_title}' with a similarity score of {round(float(candidate.similarity)*100)}%.\n\nWe’ll contact you soon with the next steps.\n\nBest,\nHireMate Team"
 
-            success += 1
+            msg.attach(MIMEText(body, "plain"))
+            server.sendmail(sender_email, candidate.candidate_email, msg.as_string())
 
-        except Exception as e:
-            print(f"❌ Failed to send email to {candidate.candidate_email}: {e}")
-            failure += 1
+        server.quit()
+        return JSONResponse(content={"message": "Emails sent successfully."}, status_code=200)
 
-    return {
-        "message": "Emails processed.",
-        "emails_sent": success,
-        "emails_failed": failure
-    }
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
 
@@ -376,7 +371,7 @@ def cosine(threshold: float = Query(0.5)):
         matches = []
         for j, score in enumerate(similarity_matrix[i]):
             score_float = round(float(score), 2)
-            status = "Selected" if score >= threshold else "Not Selected"
+            status = "selected" if score >= threshold else "not selected"
 
             # ✅ Save match result with candidate email
             match = MatchResult(
