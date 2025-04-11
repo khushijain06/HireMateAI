@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "hiremate-ui",
+			"path": "../../../Downloads/hiremate-ui"
+		},
+		{
+			"name": "HireMate",
+			"path": "."
+		},
+		{
+			"name": "CVs1",
+			"path": "../../../Downloads/Dataset/Dataset/[Usecase 5] AI-Powered Job Application Screening System/CVs1"
+		}
+	],
+	"settings": {}
+}
