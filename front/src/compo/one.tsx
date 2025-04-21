@@ -30,10 +30,10 @@ const navigate = useNavigate()
     setLoad(true);
   
     try {
-      await fetch("http://127.0.0.1:8000/summarize", {
+      await fetch("https://hiremateai.onrender.com/summarize", {
         method: "POST",
       });
-      await fetch("http://127.0.0.1:8000/summarize-cvs", {
+      await fetch("https://hiremateai.onrender.com/summarize-cvs", {
         method: "POST",
       });
       alert("Job and CVs summarized successfully!");   
@@ -56,7 +56,7 @@ const navigate = useNavigate()
     try {
       const jobData = new FormData();
       jobData.append("file", jobFile);
-      await fetch("http://127.0.0.1:8000/summarize", {
+      await fetch("https://hiremateai.onrender.com/summarize", {
         method: "POST",
         body: jobData,
       });
@@ -67,7 +67,7 @@ const navigate = useNavigate()
         cvData.append("files", file, file.webkitRelativePath || file.name);
       });
       
-      await fetch("http://127.0.0.1:8000/summarize-cvs", {
+      await fetch("https://hiremateai.onrender.com/summarize-cvs", {
         method: "POST",
         body: cvData,
       });

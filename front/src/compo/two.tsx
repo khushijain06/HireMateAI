@@ -17,7 +17,7 @@ const HireMateResult = () => {
       const thresholdDecimal = threshold / 100; // 👈 Convert to decimal
   
       const response = await fetch(
-        `http://127.0.0.1:8000/send-mails?threshold=${thresholdDecimal}`, // ✅ Send decimal
+        `https://hiremateai.onrender.com/send-mails?threshold=${thresholdDecimal}`, // ✅ Send decimal
         {
           method: "POST",
         }
@@ -42,7 +42,7 @@ const HireMateResult = () => {
   useEffect(() => {
     const fetchJobTitles = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/cosine?threshold=0");
+        const response = await fetch("https://hiremateai.onrender.com/cosine?threshold=0");
         const data = await response.json();
   
         const titles = Array.isArray(data.results)
@@ -66,7 +66,7 @@ const HireMateResult = () => {
     setLoading(true);
     try {
       const thresholdDecimal = threshold / 100;
-      const response = await fetch(`http://127.0.0.1:8000/cosine?threshold=${thresholdDecimal}`);
+      const response = await fetch(`https://hiremateai.onrender.com/cosine?threshold=${thresholdDecimal}`);
       const data = await response.json();
 
       const matchedJob = data.results.find((job: any) =>

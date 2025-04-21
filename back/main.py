@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-  # PyMuPDF for reading PDFs
+# PyMuPDF for reading PDFs
 import ollama
 import shutil
 from typing import List
@@ -138,19 +138,21 @@ def send_mails(threshold: float = 0.5, db: Session = Depends(get_db)):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
-# --------------------- JD Summarizer ---------------------
+# ---------------------JD Summarizer  ---------------------
 @app.post("/summarize")
 def summarize_job_descriptions(file: UploadFile = File(None)):
     print("🔄 /summarize endpoint called")
     summaries = []
     db = SessionLocal()
     try:
+        base_dir = os.path.dirname(__file__)
         if file:
-            filepath = f"./uploaded_job_description.csv"
+            filepath = os.path.join(base_dir, "uploaded_job_description.csv")
             with open(filepath, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
         else:
-            filepath = "./job_description.csv"  # default file
+            filepath = os.path.join(base_dir, "job_description.csv")
+
 
         with open(filepath, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -224,12 +226,21 @@ from sqlalchemy.orm import Session
 # from models import CVSummary
 # from utils import extract_text_from_pdf, summarize_cv, parse_summary
 
+from fastapi import UploadFile, File
+from fastapi.responses import JSONResponse
+from typing import List
+import os
+import shutil
+import fitz  # PyMuPDF
+
 @app.post("/summarize-cvs")
 def summarize_cvs(files: List[UploadFile] = File(None)):
     print("📁 /summarize-cvs endpoint called")
 
-    uploaded_folder = "./temp_cvs"
-    default_folder = "./CVs1"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    uploaded_folder = os.path.join(base_dir, "temp_cvs")
+    default_folder = os.path.join(base_dir, "CVs1")
+
     db = SessionLocal()
     summaries = []
 
@@ -243,8 +254,7 @@ def summarize_cvs(files: List[UploadFile] = File(None)):
             filepaths = []
 
             for uploaded_file in files:
-                # Save file preserving relative path if available
-                relative_path = uploaded_file.filename  # May include folder path
+                relative_path = uploaded_file.filename
                 save_path = os.path.join(uploaded_folder, relative_path)
                 os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
@@ -253,11 +263,11 @@ def summarize_cvs(files: List[UploadFile] = File(None)):
 
                 filepaths.append(save_path)
         else:
-            print("📂 No files uploaded. Using default ./CVs1 folder.")
+            print("📂 No files uploaded. Using default CVs1 folder.")
             filepaths = [
                 os.path.join(default_folder, f)
                 for f in os.listdir(default_folder)
-                if f.endswith('.pdf')
+                if f.lower().endswith('.pdf')
             ]
 
         if not filepaths:
@@ -300,8 +310,7 @@ def summarize_cvs(files: List[UploadFile] = File(None)):
         "data": summaries
     }
 
-
-
+# PDF text extraction
 def extract_text_from_pdf(path: str) -> str:
     doc = fitz.open(path)
     text = ""
